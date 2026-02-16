@@ -1,0 +1,13 @@
+.env.example
+LICENSE
+MANIFEST.in
+README.md
+pyproject.toml
+src/sastastic/__main__.py
+src/sastastic/testic.py
+src/sastastic.egg-info/PKG-INFO
+src/sastastic.egg-info/SOURCES.txt
+src/sastastic.egg-info/dependency_links.txt
+src/sastastic.egg-info/entry_points.txt
+src/sastastic.egg-info/requires.txt
+src/sastastic.egg-info/top_level.txt

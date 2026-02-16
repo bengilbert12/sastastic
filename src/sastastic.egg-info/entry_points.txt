@@ -1,0 +1,3 @@
+[console_scripts]
+sastastic = sastastic.__main__:publish
+sastestic = sastastic.testic:test

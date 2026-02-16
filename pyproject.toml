@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = 'sastastic'
+version = '1.1.6'
+readme = 'README.md'
+authors = [{ name = 'Benyonce', email = 'bgilbert@diesellaptops.com' }]
+license = { file = 'LICENSE' }
+dependencies = [
+    'requests',
+    'python-dotenv'
+]
+
+[project.scripts]
+sastastic = 'sastastic.__main__:publish'
+sastestic = 'sastastic.testic:test'
