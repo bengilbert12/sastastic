@@ -4,4 +4,5 @@ Can be run in cli for dry-run testing by using "sastestic". no arguments require
 
 TO USE:
 pip install sastastic
-in directory containint sast.json: sastastic "app_name" OR sastestic
+
+in directory containing sast.json: sastastic "app_name" OR sastestic
