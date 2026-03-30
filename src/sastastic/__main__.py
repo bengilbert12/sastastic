@@ -6,6 +6,9 @@ import os
 import sys
 from sastastic.utils import get_fingerprint, fetch_existing_tickets
 
+IMPACT_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+SEVERITY_THRESHOLD = {"high": 0, "med": 1, "low": 2, "all": float('inf')}
+
 
 
 load_dotenv()
@@ -66,7 +69,22 @@ def close_ticket(issue_key):
     print(f"  Closed {issue_key} (finding no longer detected)")
 
 
-def publish(app=str(sys.argv[1]), parent=str(sys.argv[2])):
+def publish():
+    _args = sys.argv[1:]
+    positional = [a for a in _args if not a.startswith('-')]
+    if len(positional) < 2:
+        print("Usage: sastastic <app-name> <parent-ticket> [--severity high|med|low|all]")
+        sys.exit(1)
+    app, parent = positional[0], positional[1]
+
+    _sev_arg = next((a[len('--severity='):] if a.startswith('--severity=') else _args[i+1]
+                     for i, a in enumerate(_args)
+                     if a == '--severity' or a.startswith('--severity=')), 'high')
+    if _sev_arg.lower() not in SEVERITY_THRESHOLD:
+        print(f"Error: invalid --severity value '{_sev_arg}'. Use: high, med, low, all")
+        sys.exit(1)
+    severity_threshold = SEVERITY_THRESHOLD[_sev_arg.lower()]
+
     with open('sast.json', 'r') as f:
         data = json.load(f)
 
@@ -92,6 +110,10 @@ def publish(app=str(sys.argv[1]), parent=str(sys.argv[2])):
             "end": end,
         })
 
+    unknown = [f for f in findings if not (f["impact"] or '').upper() in IMPACT_ORDER]
+    if unknown:
+        print(f"Warning: {len(unknown)} finding{'s' if len(unknown) != 1 else ''} with no impact rating — use --severity all to include them")
+
     # Single batch query for all fingerprints
     all_labels = [f["label"] for f in findings]
     existing_tickets = fetch_existing_tickets(all_labels, search_url, project, headers, auth)
@@ -99,6 +121,9 @@ def publish(app=str(sys.argv[1]), parent=str(sys.argv[2])):
 
     for finding in findings:
         label = finding["label"]
+        impact = (finding["impact"] or '').upper()
+        if IMPACT_ORDER.get(impact, 99) > severity_threshold:
+            continue
         if label in existing_tickets:
             print(f"Skipping (exists: {existing_tickets[label]}): {finding['cwe']} at {finding['path']}")
             continue

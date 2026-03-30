@@ -6,7 +6,7 @@ Ingests Semgrep SAST output (JSON) and creates Jira tickets for each finding. De
 
 - Python 3.8+
 - A `sast.json` file in the working directory (Semgrep JSON output)
-- Jira API credentials set as environment variables
+- Jira API credentials set as environment variables (Only if you need to check against existing tickets)
 
 ## Installation
 
@@ -30,7 +30,7 @@ Variables can be set in the environment or in a `.env` file in the working direc
 ### `sastastic` — Create Jira tickets (CI/CD)
 
 ```
-sastastic "app-name" "PARENT-TICKET"
+sastastic "app-name" "PARENT-TICKET" [--severity high|med|low|all]
 ```
 
 - `app-name` — label for the application being scanned (used in ticket summaries)
@@ -38,25 +38,38 @@ sastastic "app-name" "PARENT-TICKET"
 
 **Idempotent by design:** each finding is fingerprinted and stored as a Jira label (`sastastic-<fingerprint>`). On subsequent runs:
 - Findings with an existing open ticket are skipped
-- Tickets whose finding no longer appears in the scan are automatically transitioned to Done
+- Tickets whose finding no longer appears in the scan are automatically transitioned to Done (auto-close is based on finding presence, not severity — lowering `--severity` on a later run will not close tickets for findings that are still detected)
+
+**Flags:**
+
+| Flag                      | Description                                                              |
+|---------------------------|--------------------------------------------------------------------------|
+| `--severity high\|med\|low\|all` | Only create tickets for findings at or above this severity. Default: `high` |
 
 ### `sastestic` — Dry-run preview (local development)
 
 Preview what tickets would be created without touching Jira.
 
 ```
-sastestic [w] [--check-jira]
+sastestic [--windows] [--severity high|med|low|all]
 ```
 
 **Flags:**
 
-| Flag            | Description                                                                 |
-|-----------------|-----------------------------------------------------------------------------|
-| *(none)*        | Parse `sast.json` and display all findings, sorted by severity              |
-| `w`             | Read `sast.json` as UTF-16 (required on some Windows environments)          |
-| `--check-jira`  | Connect to Jira and mark each finding as `[NEW]` or `[EXISTS: KEY]`        |
+| Flag                      | Description                                                              |
+|---------------------------|--------------------------------------------------------------------------|
+| `--windows`               | Read `sast.json` as UTF-16 (required on some Windows environments)       |
+| `--severity high\|med\|low\|all` | Control which findings are displayed. Default: `high`             |
 
-**Example output (no flags):**
+**Default output behavior:**
+
+By default, `sastestic` only shows findings that are actionable:
+- When Jira credentials are configured: findings that would generate a new ticket, plus all findings at or above the severity threshold (new or existing)
+- When Jira credentials are not configured: findings at or above the severity threshold only
+
+Use `--severity` to widen or narrow what is shown. The summary totals always reflect all findings in the scan regardless of the severity filter.
+
+**Example output (`--severity all`):**
 
 ```
 Issue 1: [HIGH] CWE-89: SQL Injection
@@ -72,7 +85,7 @@ Issue 2: [MEDIUM] CWE-79: Cross-Site Scripting
 Total: 2 findings: 1 HIGH, 1 MEDIUM
 ```
 
-**Example output (`--check-jira`):**
+**Example output (default, with Jira credentials present):**
 
 ```
 Checking Jira for existing tickets...

@@ -11,6 +11,7 @@ DIM    = "\033[2m"
 RESET  = "\033[0m"
 
 IMPACT_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+SEVERITY_THRESHOLD = {"high": 0, "med": 1, "low": 2, "all": float('inf')}
 
 
 def impact_color(impact):
@@ -19,8 +20,17 @@ def impact_color(impact):
 
 def test():
     args = sys.argv[1:]
-    encoding = 'utf-16' if 'w' in args else 'utf-8'
-    check_jira = '--check-jira' in args
+    encoding = 'utf-16' if '--windows' in args else 'utf-8'
+    severity_arg = next((args[i+1] for i, a in enumerate(args) if a == '--severity' and i+1 < len(args)), 'high')
+    if severity_arg.lower() not in SEVERITY_THRESHOLD:
+        print(f"Error: invalid --severity value '{severity_arg}'. Use: high, med, low, all")
+        sys.exit(1)
+    severity_threshold = SEVERITY_THRESHOLD[severity_arg.lower()]
+
+    from dotenv import load_dotenv
+    load_dotenv()
+    _jira_vars = all(os.environ.get(v) for v in ("JIRA_KEY", "JIRA_URL", "JIRA_EMAIL", "JIRA_PROJECT"))
+    check_jira = _jira_vars
 
     with open('sast.json', 'r', encoding=encoding) as f:
         data = json.load(f, strict=False) if encoding == 'utf-16' else json.load(f)
@@ -49,9 +59,7 @@ def test():
         try:
             import requests
             from requests.auth import HTTPBasicAuth
-            from dotenv import load_dotenv
             from sastastic.utils import fetch_existing_tickets
-            load_dotenv()
             jira_key   = os.environ["JIRA_KEY"]
             jira_url   = os.environ["JIRA_URL"]
             jira_email = os.environ["JIRA_EMAIL"]
@@ -66,9 +74,19 @@ def test():
             )
         except KeyError as e:
             print(f"{YELLOW}Warning: missing env var {e}, skipping Jira check{RESET}")
+            check_jira = False
 
     print()
     for i, f in enumerate(findings, 1):
+        meets_severity = IMPACT_ORDER.get(f["impact"], 99) <= severity_threshold
+        if check_jira:
+            is_new = f["label"] not in existing_tickets
+            if not (is_new or meets_severity):
+                continue
+        else:
+            if not meets_severity:
+                continue
+
         color = impact_color(f["impact"])
 
         if check_jira:
@@ -83,6 +101,10 @@ def test():
         print(f"  File:    {f['path']} line(s) {f['start']}-{f['end']}")
         print(f"  Details: {f['message']}")
         print()
+
+    unknown = [f for f in findings if f["impact"] == "UNKNOWN"]
+    if unknown:
+        print(f"{YELLOW}Warning: {len(unknown)} finding{'s' if len(unknown) != 1 else ''} with no impact rating — use --severity all to include them{RESET}\n")
 
     counts = Counter(f["impact"] for f in findings)
     total  = len(findings)
