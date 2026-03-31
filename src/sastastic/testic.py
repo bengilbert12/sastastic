@@ -72,8 +72,8 @@ def test():
             existing_tickets = fetch_existing_tickets(
                 [f["label"] for f in findings], search_url, project, headers, auth
             )
-        except KeyError as e:
-            print(f"{YELLOW}Warning: missing env var {e}, skipping Jira check{RESET}")
+        except (KeyError, requests.exceptions.RequestException) as e:
+            print(f"{YELLOW}Warning: Jira check failed ({e}), skipping{RESET}")
             check_jira = False
 
     print()
