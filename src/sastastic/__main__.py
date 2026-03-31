@@ -27,7 +27,7 @@ headers = {
 }
 auth = HTTPBasicAuth(email, jira_key)
 base_url = url.rsplit('/issue', 1)[0]
-search_url = f"{base_url}/search"
+search_url = f"{base_url}/search/jql"
 
 
 

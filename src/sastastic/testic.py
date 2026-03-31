@@ -65,7 +65,7 @@ def test():
             jira_email = os.environ["JIRA_EMAIL"]
             project    = os.environ["JIRA_PROJECT"]
             base_url   = jira_url.rsplit('/issue', 1)[0]
-            search_url = f"{base_url}/search"
+            search_url = f"{base_url}/search/jql"
             headers    = {"Accept": "application/json", "Content-Type": "application/json"}
             auth       = HTTPBasicAuth(jira_email, jira_key)
             print("Checking Jira for existing tickets...")

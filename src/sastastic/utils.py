@@ -30,7 +30,10 @@ def fetch_existing_tickets(labels, search_url, project, headers, auth):
                 headers=headers,
                 auth=auth
             )
-            response.raise_for_status()
+            if not response.ok:
+                raise requests.exceptions.HTTPError(
+                    f"{response.status_code} from {response.url}: {response.text}", response=response
+                )
             data = response.json()
             issues = data.get("issues", [])
             for issue in issues:
